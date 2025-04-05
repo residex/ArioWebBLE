@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARIO Scooter WebBLE Interface</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/protobufjs/7.4.0/protobuf.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .input-field {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    
+    .instruction-box {
+      background-color: #fff3cd;
+      border: 1px solid #ffecb5;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 15px;
+      color: #856404;
+    }
+    
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .button-group {
+      margin: 16px 0;
+    }
+    
+    button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 10px 16px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 4px 2px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    
+    .status-box {
+      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    
+    #command-form {
+      display: none;
+    }
+    
+    #response-log {
+      max-height: 300px;
+      overflow-y: auto;
+      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      margin-top: 16px;
+    }
+    
+    #response-log div {
+      border-bottom: 1px solid #eee;
+      padding: 8px 0;
+    }
+    
+    label {
+      display: block;
+      margin: 10px 0 5px 0;
+    }
+    
+    select, input {
+      width: 100%;
+      padding: 8px;
+      margin: 6px 0;
+      box-sizing: border-box;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    /* Tab styles */
+    .tab-container {
+      display: flex;
+      border-bottom: 1px solid #ccc;
+      margin-bottom: 16px;
+    }
+    
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      background-color: #f1f1f1;
+      border: 1px solid #ccc;
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+      margin-right: 5px;
+    }
+    
+    .tab.active {
+      background-color: #fff;
+      border-bottom: 1px solid #fff;
+      margin-bottom: -1px;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    /* Quick Action Buttons */
+    .quick-action-container {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin: 30px 0;
+    }
+    
+    .quick-action-btn {
+      padding: 20px 40px;
+      font-size: 18px;
+      border-radius: 8px;
+      min-width: 150px;
+    }
+    
+    .unlock-btn {
+      background-color: #4CAF50;
+    }
+    
+    .lock-btn {
+      background-color: #f44336;
+    }
+  </style>
+</head>
+<body>
+  <h1>ARIO Scooter WebBLE Interface</h1>
+  
+  <div class="card">
+    <h2>Find Your Scooter</h2>
+    <div class="input-group">
+      <input type="text" id="car-id" placeholder="Enter Car ID (e.g. 802408000365)" class="input-field" required>
+      <button id="find-car-button">Find Car</button>
+    </div>
+    <div class="instruction-box">
+      <p><strong>Important:</strong> You must enter a Car ID and click "Find Car" first before you can connect to your scooter.</p>
+    </div>
+    <div class="status-box" id="car-info-status" style="display: none; margin-top: 10px;">
+      <p><strong>IMEI:</strong> <span id="car-imei">Not found</span></p>
+      <p><strong>Battery:</strong> <span id="car-battery">N/A</span>%</p>
+      <p><strong>Location:</strong> <span id="car-location">N/A</span></p>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Connection Status</h2>
+    <div class="status-box">
+      <p><strong>Status:</strong> <span id="status">Not connected</span></p>
+      <p><strong>Login:</strong> <span id="login-status">Not Logged In</span></p>
+    </div>
+    
+    <div class="button-group">
+      <button id="scan-button" disabled>Scan for ARIO Device</button>
+      <button id="connect-button" disabled>Connect</button>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Control Scooter</h2>
+    
+    <div class="tab-container">
+      <div class="tab active" data-tab="quick-actions">Quick Actions</div>
+      <div class="tab" data-tab="advanced-commands">Advanced Commands</div>
+    </div>
+    
+    <div id="quick-actions" class="tab-content active">
+      <div class="quick-action-container">
+        <button id="unlock-button" class="quick-action-btn unlock-btn" disabled>Unlock</button>
+        <button id="lock-button" class="quick-action-btn lock-btn" disabled>Lock</button>
+      </div>
+    </div>
+    
+    <div id="advanced-commands" class="tab-content">
+      <form id="command-form">
+        <div>
+          <label for="command-type">Command Type:</label>
+          <select id="command-type">
+            <option value="query">Query</option>
+            <option value="set">Set</option>
+          </select>
+        </div>
+        
+        <div>
+          <label for="command-code">Command Code:</label>
+          <input type="number" id="command-code" required>
+        </div>
+        
+        <div id="value-field">
+          <label for="command-value">Value (for Set command):</label>
+          <input type="text" id="command-value">
+        </div>
+        
+        <div class="button-group">
+          <button type="submit" id="send-command-button" disabled>Send Command</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Command Responses</h2>
+    <div id="response-log">
+      <div>No responses yet</div>
+    </div>
+  </div>
+
+  <script>
+    // Tab handling
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs and contents
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked tab
+        tab.classList.add('active');
+        
+        // Show corresponding content
+        const tabId = tab.getAttribute('data-tab');
+        document.getElementById(tabId).classList.add('active');
+      });
+    });
+    
+    // Show/hide value field based on command type
+    document.getElementById('command-type').addEventListener('change', function() {
+      const valueField = document.getElementById('value-field');
+      if (this.value === 'query') {
+        valueField.style.display = 'none';
+      } else {
+        valueField.style.display = 'block';
+      }
+    });
+  </script>
+  
+  <!-- Include the WebBLE Script -->
+  <script src="script.js"></script>
+</body>
+</html>
