@@ -482,7 +482,7 @@ async function findCarById(carId) {
     
     // Generate a random query parameter to prevent caching;
     
-    const response = await fetch(noCacheUrl, {
+    const response = await fetch(API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
