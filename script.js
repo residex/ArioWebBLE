@@ -480,10 +480,7 @@ async function findCarById(carId) {
     
     addToResponseLog(`Searching for car ID: ${carId}...`, "info");
     
-    // Generate a random query parameter to prevent caching
-    const timestamp = Date.now();
-    const randomValue = Math.floor(Math.random() * 1000000);
-    const noCacheUrl = `${API_URL}?_=${timestamp}-${randomValue}`;
+    // Generate a random query parameter to prevent caching;
     
     const response = await fetch(noCacheUrl, {
       method: 'POST',
