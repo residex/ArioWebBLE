@@ -480,7 +480,12 @@ async function findCarById(carId) {
     
     addToResponseLog(`Searching for car ID: ${carId}...`, "info");
     
-    const response = await fetch(API_URL, {
+    // Generate a random query parameter to prevent caching
+    const timestamp = Date.now();
+    const randomValue = Math.floor(Math.random() * 1000000);
+    const noCacheUrl = `${API_URL}?_=${timestamp}-${randomValue}`;
+    
+    const response = await fetch(noCacheUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -490,21 +495,44 @@ async function findCarById(carId) {
         'Os': '1',
         'Accept-Language': 'en-AU;q=1.0',
         'Token': '3e9787d5a40ea1c5c3c1d03677837510dc9d7e6d278e614fa85afb54aa642078',
-        'Accept-Encoding': 'gzip, deflate, br',
         'Deviceid': 'C5898E431F44919F6FDF547EFBE8992D',
-        'User-Agent': 'Ario/1.7.1 (sg.ario.scooter; build:101; iOS 18.3.1) Alamofire/5.9.0'
+        'User-Agent': 'Ario/1.7.1 (sg.ario.scooter; build:101; iOS 18.3.1) Alamofire/5.9.0',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       },
-      body: JSON.stringify({ car_id: carId })
+      body: JSON.stringify({ 
+        car_id: carId,
+        // Add a timestamp to prevent response caching
+        timestamp: Date.now()
+      }),
+      // Ensure fetch doesn't use cache
+      cache: 'no-store'
     });
+    
+    // Check for 204 responses specifically
+    if (response.status === 204) {
+      // Retry the request with a different timestamp
+      addToResponseLog("Received empty response, retrying...", "warning");
+      setTimeout(() => findCarById(carId), 500); // Retry after 500ms
+      return;
+    }
     
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
     
-    const data = await response.json();
+    // Check if response is empty
+    const responseText = await response.text();
+    if (!responseText || responseText.trim() === '') {
+      throw new Error("Received empty response from server");
+    }
+    
+    // Parse the response
+    const data = JSON.parse(responseText);
     
     if (data.res_code !== 0 || !data.data) {
-      throw new Error("Failed to find car or invalid response format");
+      throw new Error(`Failed to find car or invalid response format: ${JSON.stringify(data)}`);
     }
     
     const carInfo = data.data;
